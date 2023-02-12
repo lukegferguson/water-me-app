@@ -18,25 +18,43 @@ package com.example.waterme.viewmodel
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.waterme.data.DataSource
+import com.example.waterme.worker.WaterReminderWorker
 import java.util.concurrent.TimeUnit
 
 class PlantViewModel(application: Application): ViewModel() {
 
     val plants = DataSource.plants
 
+    private val workManager = WorkManager.getInstance(application)
+
     internal fun scheduleReminder(
         duration: Long,
         unit: TimeUnit,
         plantName: String
     ) {
-        // TODO: create a Data instance with the plantName passed to it
 
-        // TODO: Generate a OneTimeWorkRequest with the passed in duration, time unit, and data
-        //  instance
+        //Instance of Data class with plantName
+        var data: Data = Data.Builder()
+            .putString(WaterReminderWorker.nameKey, plantName)
+            .build()
 
-        // TODO: Enqueue the request as a unique work request
+        //Make one time work request taking the Data object and delay values
+        val waterReminderWorkRequest = OneTimeWorkRequestBuilder<WaterReminderWorker>()
+            .setInputData(data)
+            .setInitialDelay(duration, unit)
+            .build()
+
+        //Create unique work request and enqueue
+        workManager.beginUniqueWork(
+            plantName,
+            ExistingWorkPolicy.REPLACE,
+            waterReminderWorkRequest)
+            .enqueue()
     }
 }
 
